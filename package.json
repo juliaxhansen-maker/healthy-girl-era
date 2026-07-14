@@ -1,0 +1,16 @@
+{
+  "name": "healthy-girl-era",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://juliaxhansen-maker.github.io/healthy-girl-era",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "scripts": {
+    "build": "react-scripts build"
+  },
+  "devDependencies": {
+    "react-scripts": "5.0.1"
+  }
+}
