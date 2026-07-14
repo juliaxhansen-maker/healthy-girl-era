@@ -33,6 +33,27 @@ const CUPS = 16;
 const STORAGE_KEY = "seventyfive-hard-girlypop-v3";
 const PHOTO_PREFIX = "sfhg-photo-";
 
+// ---------- persistence ----------
+// The app was originally built against Claude's artifact-only `window.storage`
+// API, which doesn't exist once deployed as a standalone site/PWA — so every
+// save silently failed and everything reset on close. This shim mimics that
+// same get/set/delete shape but persists to real localStorage instead.
+const storage = {
+  async get(key) {
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) return null;
+    return { key, value: raw };
+  },
+  async set(key, value) {
+    window.localStorage.setItem(key, value);
+    return { key, value };
+  },
+  async delete(key) {
+    window.localStorage.removeItem(key);
+    return { key, deleted: true };
+  },
+};
+
 // ---------- shared styles ----------
 const eyebrow = { fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", color: C.gold, textAlign: "center", marginBottom: 14, fontWeight: 500 };
 const card = { background: C.ivory, borderRadius: 20, padding: "18px 16px", boxShadow: "0 1px 4px rgba(94,27,54,0.06)" };
@@ -216,7 +237,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await window.storage.get(STORAGE_KEY);
+        const res = await storage.get(STORAGE_KEY);
         if (res?.value) {
           const s = JSON.parse(res.value);
           setDay(s.day ?? 1);
@@ -238,7 +259,7 @@ export default function App() {
     if (!loaded) return;
     (async () => {
       try {
-        await window.storage.set(STORAGE_KEY, JSON.stringify({ day, tasks, water, workoutLogs, book, photoMeta, passcode, foodLog }));
+        await storage.set(STORAGE_KEY, JSON.stringify({ day, tasks, water, workoutLogs, book, photoMeta, passcode, foodLog }));
       } catch (e) { console.error("save failed", e); }
     })();
   }, [day, tasks, water, workoutLogs, book, photoMeta, passcode, foodLog, loaded]);
@@ -251,7 +272,7 @@ export default function App() {
       for (const m of photoMeta) {
         if (photos[m.id]) { next[m.id] = photos[m.id]; continue; }
         try {
-          const res = await window.storage.get(PHOTO_PREFIX + m.id);
+          const res = await storage.get(PHOTO_PREFIX + m.id);
           if (res?.value) next[m.id] = res.value;
         } catch (e) { /* missing */ }
       }
@@ -301,7 +322,7 @@ export default function App() {
     try {
       const dataUrl = await resizeImage(file);
       const id = Date.now().toString(36);
-      await window.storage.set(PHOTO_PREFIX + id, dataUrl);
+      await storage.set(PHOTO_PREFIX + id, dataUrl);
       const meta = { id, day: Math.min(day, 75), date: new Date().toLocaleDateString() };
       setPhotoMeta((m) => [meta, ...m]);
       setPhotos((p) => ({ ...p, [id]: dataUrl }));
@@ -313,7 +334,7 @@ export default function App() {
   const deletePhoto = async (id) => {
     setPhotoMeta((m) => m.filter((x) => x.id !== id));
     setPhotos((p) => { const n = { ...p }; delete n[id]; return n; });
-    try { await window.storage.delete(PHOTO_PREFIX + id); } catch (e) { /* gone */ }
+    try { await storage.delete(PHOTO_PREFIX + id); } catch (e) { /* gone */ }
   };
 
   // food cam actions
